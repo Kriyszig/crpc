@@ -9,7 +9,16 @@
 
 namespace cRPC
 {
-    class Server
+    class Executor
+    {
+    protected:
+        int exec(const char* directive)
+        {
+            return std::system(directive);
+        }
+    };
+
+    class Server: protected Executor
     {
     public:
         void saveFile(std::string name, std::string prog)
@@ -32,7 +41,6 @@ namespace cRPC
             struct sockaddr_in address;
             int opt = 1;
             int addrlen = sizeof(address);
-            const char *hello = "Hello from server";
 
             if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
             {
@@ -104,30 +112,55 @@ namespace cRPC
                         send(new_socket , sendmsg, strlen(sendmsg) , 0 );
                         break;
                     }
-                    
-                    fname = fname.substr(0, fname.find('.')) + ".cc";
-                    std::string compile = "g++ ./programs/" + fname + ">send.txt 2>send.txt";
-                    std::system("if [ ! -f ./send.txt ]; then\n	touch ./send.txt\nelse\n    rm ./send.txt\n	touch ./send.txt\nfi");
-                    int exit_code = std::system(compile.c_str());
 
-                    if(exit_code != 0)
+                    std::string fpath = "./programs/" + fname;
+                    std::ifstream dfe(fpath.c_str());
+                    if(!dfe.good())
                     {
-                        std::ifstream ifs("send.txt");
+                        const char* sendmsg = "File doesn't exist";
+                        send(new_socket , sendmsg, strlen(sendmsg) , 0);
+                        continue;
+                    }
+                    
+                    if(fname.substr(fname.find('.') + 1) == "cc")
+                    {
+                        std::string compile = "cd ./programs &&g++ " + fname + ">../send.txt 2>../send.txt";
+                        exec("if [ ! -f ./send.txt ]; then\n	touch ./send.txt\nelse\n    rm ./send.txt\n	touch ./send.txt\nfi");
+                        int exit_code = exec(compile.c_str());
+
+                        if(exit_code != 0)
+                        {
+                            std::ifstream ifs("send.txt");
+                            std::string errormsg;
+                            getline(ifs, errormsg, (char)ifs.eof());
+
+                            const char* sendmsg = errormsg.c_str();
+                            send(new_socket , sendmsg, strlen(sendmsg) , 0 );
+                        }
+                        else
+                        {
+                            exec("cd ./programs && ./a.out>../send.txt 2>../send.txt");
+                            std::ifstream ifs("send.txt");
+                            std::string outmsg;
+                            getline(ifs, outmsg, (char)ifs.eof());
+
+                            const char* sendmsg = outmsg.c_str();
+                            send(new_socket , sendmsg, strlen(sendmsg) , 0 );
+                        }
+                    }
+                    else if(fname.substr(fname.find('.') + 1) == "txt")
+                    {
+                        std::ifstream ifs(fpath.c_str());
                         std::string errormsg;
                         getline(ifs, errormsg, (char)ifs.eof());
 
                         const char* sendmsg = errormsg.c_str();
-                        send(new_socket , sendmsg, strlen(sendmsg) , 0 );
+                        send(new_socket , sendmsg, strlen(sendmsg), 0 );
                     }
                     else
                     {
-                        std::system("./a.out>send.txt 2>send.txt");
-                        std::ifstream ifs("send.txt");
-                        std::string outmsg;
-                        getline(ifs, outmsg, (char)ifs.eof());
-
-                        const char* sendmsg = outmsg.c_str();
-                        send(new_socket , sendmsg, strlen(sendmsg) , 0 );
+                        const char* sendmsg = "File type not supported";
+                        send(new_socket , sendmsg, strlen(sendmsg), 0 );
                     }
                 }
             }

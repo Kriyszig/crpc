@@ -13,7 +13,11 @@ namespace cRPC
 {
     class Client
     {
+    private:
+        char* addr;
     public:
+        Client(char* addr_): addr(addr_) {}
+
         std::string getFile(std::string name)
         {
             std::ifstream ifs("./programs/" + name);
@@ -31,10 +35,6 @@ namespace cRPC
             int sock = 0, valread;
             struct sockaddr_in serv_addr;
 
-            std::string s = getFile("hello.cc"); 
-            char *hello = (char*)s.c_str();
-
-
             if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
             {
                 return -1;
@@ -44,7 +44,7 @@ namespace cRPC
             serv_addr.sin_port = htons(PORT);
 
             // Convert IPv4 and IPv6 addresses from text to binary form
-            if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)
+            if(inet_pton(AF_INET, addr, &serv_addr.sin_addr)<=0)
             {
                 return -1;
             }
@@ -109,7 +109,10 @@ namespace cRPC
 
 int main(int argc, char const *argv[])
 {
-    cRPC::Client cl;
+    if(argc != 2)
+        return 1;
+
+    cRPC::Client cl((char*)argv[1]);
     cl.run();
     return 0;
 }
