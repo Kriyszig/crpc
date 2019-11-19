@@ -97,7 +97,7 @@ namespace cRPC
                 if(megtoserver == "$STOP")
                     break;
                 
-                std::system("read");
+                std::system("read -p \"Press enter to continue.......\"");
                 std::system("clear");
             }
 
@@ -110,7 +110,11 @@ namespace cRPC
 int main(int argc, char const *argv[])
 {
     if(argc != 2)
+    {
+        std::cout<<"Please enter the ipv4 address of the client while execution of binary\n";
+        std::cout<<"Use:\n./a.out 127.0.0.1\nTo execute on the same local system\n";
         return 1;
+    }
 
     cRPC::Client cl((char*)argv[1]);
     cl.run();
